@@ -13,17 +13,18 @@
 	public class Plugin : BaseUnityPlugin {
 		public const string modGUID = "spindles.MorePlayersImproved";
 		public const string modName = "MorePlayersImproved";
-		public const string modVersion = "1.0.0";
+		public const string modVersion = "1.0.1";
 
 		private readonly Harmony harmony = new Harmony(modGUID);
 
 		public static ConfigEntry<int> configMaxPlayers;
+		public static ConfigEntry<bool> configPublicLobbySupport;
 
 		public static ManualLogSource mls;
 
 		void Awake() {
 			mls = BepInEx.Logging.Logger.CreateLogSource(modGUID);
-			mls.LogInfo($"{modGUID} is now awake!");
+			mls.LogInfo($"{modGUID} has awoken!");
 
 			configMaxPlayers = Config.Bind
 			(
@@ -33,9 +34,23 @@
 				"The max amount of players allowed in a server"
 			);
 
-			harmony.PatchAll(typeof(OnConnectedToMasterPatch));
+			configPublicLobbySupport = Config.Bind
+			(
+				"General",
+				"PublicLobbySupport",
+				false,
+				"Toggles if public lobby support is enabled (Only works on versions with public lobby support)"
+			);
+
 			harmony.PatchAll(typeof(TryJoiningRoomPatch));
 			harmony.PatchAll(typeof(HostLobbyPatch));
+			mls.LogInfo($"{modGUID} loaded main patches!");
+
+			if (configPublicLobbySupport.Value) {
+				harmony.PatchAll(typeof(OnConnectedToMasterPatch));
+				mls.LogInfo($"{modGUID} loaded PublicLobbySupport patch!");
+			}
+			mls.LogInfo($"{modGUID} is ready now!");
 		}
 
 		[HarmonyPatch(typeof(NetworkConnect), "TryJoiningRoom")]
@@ -73,6 +88,9 @@
 		[HarmonyPatch(typeof(NetworkConnect), "OnConnectedToMaster")]
 		public class OnConnectedToMasterPatch {
 			static bool Prefix() {
+				if (BuildManager.instance.version.title == "v0.1.2") {
+					return true;
+				}
 				Lobby SM_currentLobby = (Lobby)Traverse.Create(SteamManager.instance).Field("currentLobby").GetValue();
 
 				bool GM_connectRandom = (bool)Traverse.Create(GameManager.instance).Field("connectRandom").GetValue();
