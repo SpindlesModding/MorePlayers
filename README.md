@@ -1,6 +1,6 @@
 # MorePlayersImproved
 Custom version to support for R.E.P.O. beta, with support for public lobbies.
-- Public lobby support is disabled by default to support both version of the game at the moment, can be enabled in config
+- Public lobby support is enabled by default, can be disabled in config
 - Public lobbies with this mod will have their name start with `[Modded]`
 
 # MorePlayers

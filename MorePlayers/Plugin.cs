@@ -8,12 +8,14 @@
 	using Steamworks.Data;
 	using Steamworks;
 	using UnityEngine;
+	using System.Reflection;
+	using System;
 
 	[BepInPlugin(modGUID, modName, modVersion)]
 	public class Plugin : BaseUnityPlugin {
 		public const string modGUID = "spindles.MorePlayersImproved";
 		public const string modName = "MorePlayersImproved";
-		public const string modVersion = "1.0.1";
+		public const string modVersion = "1.0.2";
 
 		private readonly Harmony harmony = new Harmony(modGUID);
 
@@ -38,17 +40,17 @@
 			(
 				"General",
 				"PublicLobbySupport",
-				false,
-				"Toggles if public lobby support is enabled (Only works on versions with public lobby support)"
+				true,
+				"Toggles if public lobby support is enabled"
 			);
 
 			harmony.PatchAll(typeof(TryJoiningRoomPatch));
 			harmony.PatchAll(typeof(HostLobbyPatch));
 			mls.LogInfo($"{modGUID} loaded main patches!");
 
-			if (configPublicLobbySupport.Value) {
+			if (typeof(SteamManager).GetRuntimeMethod("UnlockLobby", new Type[] { typeof(bool) }) != null) {
 				harmony.PatchAll(typeof(OnConnectedToMasterPatch));
-				mls.LogInfo($"{modGUID} loaded PublicLobbySupport patch!");
+				mls.LogInfo($"{modGUID} enabled PublicLobbySupport!");
 			}
 			mls.LogInfo($"{modGUID} is ready now!");
 		}
@@ -88,9 +90,10 @@
 		[HarmonyPatch(typeof(NetworkConnect), "OnConnectedToMaster")]
 		public class OnConnectedToMasterPatch {
 			static bool Prefix() {
-				if (BuildManager.instance.version.title == "v0.1.2") {
+				if (!configPublicLobbySupport.Value) {
 					return true;
 				}
+
 				Lobby SM_currentLobby = (Lobby)Traverse.Create(SteamManager.instance).Field("currentLobby").GetValue();
 
 				bool GM_connectRandom = (bool)Traverse.Create(GameManager.instance).Field("connectRandom").GetValue();
